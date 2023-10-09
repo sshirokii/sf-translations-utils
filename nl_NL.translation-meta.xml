@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Translations xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customLabels>
+        <label>De wijziging van de eigendom van de eenheid is niet voltooid. Weet u zeker dat u deze zaak wilt sluiten?</label>
+        <name>hotNewLabel</name>
+    </customLabels>
+    <flowDefinitions>
+        <flows>
+            <label>Gevallen sluiten als spam</label>
+        </flows>
+        <fullName>CloseCasesAsSpam</fullName>
+    </flowDefinitions>
+</Translations>

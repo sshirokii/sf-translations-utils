@@ -1,7 +1,9 @@
 const { existsSync, readFileSync, writeFileSync } = require('fs');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+const isAlwaysArrayTags = ['customLabels'];
 const parser = new XMLParser({
-    ignoreAttributes: false
+    ignoreAttributes: false,
+    isArray: (tagName) => isAlwaysArrayTags.includes(tagName),
 });
 const builder = new XMLBuilder({
     format: true,
@@ -17,8 +19,11 @@ const [header, ...csvRows] = data.split('\n');
 const [, ...languages] = header.split(';');
 
 const rows = csvRows
-.map((row) => row.split(';'))
-.map(([name, ...labels]) => ({ name, labels }));
+    .map((row) => row.split(';'))
+    .map(([name, ...labels]) => ({ name, labels }));
+
+// open custom labels file
+// add new custom labels
 
 languages.forEach((language, languageIndex) => {
     const labelsToInsert = rows
@@ -39,18 +44,17 @@ languages.forEach((language, languageIndex) => {
     } else {
         const xmlData = readFileSync(fileName);
         xmlObject = parser.parse(xmlData);
+        const { Translations: { customLabels }} = xmlObject;
 
-        labelsToInsert.forEach(({ name, label }) => {
-            const labelToUpdate = xmlObject.Translations.customLabels.find(
-                ({ name: [nameValue] }) => nameValue === name
+        labelsToInsert.forEach((customLabel) => {
+            const { name, label } = customLabel;
+            const existingLabel = customLabels.find(
+                (customLabel) => customLabel.name === name
             );
-            if (labelToUpdate) {
-                labelToUpdate.label = [label];
+            if (existingLabel) {
+                existingLabel.label = label;
             } else {
-                xmlObject.Translations.customLabels.push({
-                    label: [label],
-                    name: [name]
-                });
+                customLabels.push(customLabel)
             }
         });
     }

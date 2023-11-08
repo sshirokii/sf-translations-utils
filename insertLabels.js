@@ -1,16 +1,17 @@
 const { existsSync, readFileSync, writeFileSync } = require('fs');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 const isAlwaysArrayTags = ['customLabels', 'labels'];
-const parser = new XMLParser({
-    ignoreAttributes: false,
-    isArray: (tagName) => isAlwaysArrayTags.includes(tagName),
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  isArray: (tagName) => isAlwaysArrayTags.includes(tagName),
 });
-const builder = new XMLBuilder({
-    format: true,
-    indentBy: '    ',
-    ignoreAttributes: false,
+const xmlBuilder = new XMLBuilder({
+  format: true,
+  indentBy: '    ',
+  ignoreAttributes: false,
 });
-const PATH_CUSTOM_LABELS = 'force-app/main/default/labels/CustomLabels.labels-meta.xml';
+const PATH_CUSTOM_LABELS =
+  'force-app/main/default/labels/CustomLabels.labels-meta.xml';
 const XML_TRANSLATION_FILE_SUFFIX = '.translation-meta.xml';
 
 // ATTRIBUTES TO SET
@@ -25,76 +26,83 @@ const [header, ...csvRows] = data.split('\n');
 const [, , ...languages] = header.split(';');
 
 // custom category to set ? add column to destructuring
-// ([name, category, ...labels])
-const rows = csvRows.map((row) => row.split(';')).
-    map(([name, ...labels]) => ({
-        name,
-        ...languages.reduce(
-            (acc, curr, index) => ({ ...acc, [curr]: labels[index] }), {}),
-    }));
+// ([name, category, ...labels]) => ({ name, catergory, ...
+const rows = csvRows
+  .map((row) => row.split(';'))
+  .map(([name, ...labels]) => ({
+    name,
+    ...languages.reduce(
+      (acc, curr, index) => ({ ...acc, [curr]: labels[index] }),
+      {},
+    ),
+  }));
 
-const setConfig = (language) => ({
-    customLabel: {
-        getLabels: ({ customLabels: { labels } }) => labels,
-        createLabel: ({ name, [language]: value }) => ({
-            fullName: name,
-            language,
-            protected: false,
-            shortDescription: name,
-            category: CATEGORY,
-            value,
-        }),
-        filePath: PATH_CUSTOM_LABELS,
-        keyProperty: 'fullName',
-        getXmlObject: (labels) => ({
-            customLabels: {
-                labels,
-            },
-        }),
-    },
-    translation: {
-        getLabels: ({ Translations: { customLabels } }) => customLabels,
-        createLabel: ({ name, [language]: value }) => ({
-            label: value,
-            name,
-        }),
-        filePath: language + XML_TRANSLATION_FILE_SUFFIX,
-        keyProperty: 'name',
-        getXmlObject: (customLabels) => ({
-            Translations: {
-                customLabels,
-            },
-        }),
-    },
-});
-
-const getConfig = (language) => {
-    const { customLabel, translation} = setConfig(language);
-    return language === CUSTOM_LABEL_LOCALE
-        ? customLabel
-        : translation;
+const config = {
+  customLabel: (language) => ({
+    getLabels: ({ customLabels: { labels } }) => labels,
+    createLabel: ({ name, [language]: value }) => ({
+      fullName: name,
+      language,
+      protected: false,
+      shortDescription: name,
+      category: CATEGORY,
+      value,
+    }),
+    filePath: PATH_CUSTOM_LABELS,
+    keyProperty: 'fullName',
+    getXmlObject: (labels) => ({
+      customLabels: {
+        labels,
+      },
+    }),
+  }),
+  translation: (language) => ({
+    getLabels: ({ Translations: { customLabels } }) => customLabels,
+    createLabel: ({ name, [language]: value }) => ({
+      label: value,
+      name,
+    }),
+    filePath: language + XML_TRANSLATION_FILE_SUFFIX,
+    keyProperty: 'name',
+    getXmlObject: (customLabels) => ({
+      Translations: {
+        customLabels,
+      },
+    }),
+  }),
 };
 
 languages.forEach((language) => {
-    const {
-        createLabel,
-        getLabels,
-        filePath,
-        getXmlObject,
-        keyProperty,
-    } = getConfig(language);
+  const { filePath, getLabels, createLabel, getXmlObject, keyProperty } =
+    getConfig(language);
 
-    const labels = rows.map(createLabel);
-    const existingLabels = existsSync(filePath) ? getLabels(parser.parse(
-        readFileSync(filePath))).map(label => ({ ...label })) : [];
+  const newLabels = rows.map(createLabel);
+  const existingLabels = existsSync(filePath)
+    ? getLabels(xmlParser.parse(readFileSync(filePath))).map((label) => ({
+        ...label,
+      }))
+    : [];
 
-    const result = labels.reduce((acc, customLabel) => [
+  const mergedLabels = newLabels
+    .reduce(
+      (acc, customLabel) => [
         ...acc.filter(
-            (existingLabel) => existingLabel[keyProperty] !==
-                customLabel[keyProperty],
-        ), { ...customLabel }], existingLabels).
-        sort((a, b) => a[keyProperty].localeCompare(b[keyProperty]));
+          (existingLabel) =>
+            existingLabel[keyProperty] !== customLabel[keyProperty],
+        ),
+        { ...customLabel },
+      ],
+      existingLabels,
+    )
+    .sort((a, b) => a[keyProperty].localeCompare(b[keyProperty]));
 
-    const xml = builder.build(getXmlObject(result));
-    writeFileSync(filePath, xml);
+  const xml = xmlBuilder.build(getXmlObject(mergedLabels));
+  writeFileSync(filePath, xml);
 });
+
+function getConfig(language) {
+  const { customLabel, translation } = config;
+  return language === CUSTOM_LABEL_LOCALE
+    ? customLabel(language)
+    : translation(language);
+}

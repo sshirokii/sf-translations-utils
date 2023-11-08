@@ -40,11 +40,11 @@ const rows = csvRows
 const config = {
   customLabel: (language) => ({
     getLabels: ({ customLabels: { labels } }) => labels,
-    createLabel: ({ name, [language]: value }) => ({
-      fullName: name,
+    createLabel: ({ name: fullName, [language]: value }) => ({
+      fullName,
       language,
       protected: false,
-      shortDescription: name,
+      shortDescription: fullName,
       category: CATEGORY,
       value,
     }),
@@ -58,8 +58,8 @@ const config = {
   }),
   translation: (language) => ({
     getLabels: ({ Translations: { customLabels } }) => customLabels,
-    createLabel: ({ name, [language]: value }) => ({
-      label: value,
+    createLabel: ({ name, [language]: label }) => ({
+      label,
       name,
     }),
     filePath: language + XML_TRANSLATION_FILE_SUFFIX,

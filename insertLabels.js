@@ -61,12 +61,13 @@ const [, , ...languages] = header.split(';');
 
 // custom category to set ? add column to destructuring
 // ([name, category, ...labels]) => ({ name, catergory, ...
+// {
 const rows = csvRows
   .map((row) => row.split(';'))
-  .map(([name, ...labels]) => ({
+  .map(([name, ...translations]) => ({
     name,
     ...languages.reduce(
-      (acc, curr, index) => ({ ...acc, [curr]: labels[index] }),
+      (acc, lang, langIndex) => ({ ...acc, [lang]: translations[langIndex] }),
       {},
     ),
   }));

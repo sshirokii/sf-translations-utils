@@ -1,5 +1,6 @@
 const { existsSync, readFileSync, writeFileSync } = require('fs');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+const Papa = require('papaparse');
 const isAlwaysArrayTags = ['customLabels', 'labels'];
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -55,22 +56,11 @@ const CATEGORY = 'Service'; // default category value
 const CUSTOM_LABEL_LOCALE = 'en_GB';
 
 // Start processing...
-const data = readFileSync(NEW_TRANSLATIONS_FILE_PATH, 'utf8');
-const [header, ...csvRows] = data.split('\n');
-const [, , ...languages] = header.split(';');
-
-// custom category to set ? add column to destructuring
-// ([name, category, ...labels]) => ({ name, catergory, ...
-// {
-const rows = csvRows
-  .map((row) => row.split(';'))
-  .map(([name, ...translations]) => ({
-    name,
-    ...languages.reduce(
-      (acc, lang, langIndex) => ({ ...acc, [lang]: translations[langIndex] }),
-      {},
-    ),
-  }));
+// Custom category to set ? add column to destructuring before languages
+const [[, ...languages]] = Papa.parse(NEW_TRANSLATIONS_FILE_PATH, {
+  preview: 1,
+});
+const rows = Papa.parse(NEW_TRANSLATIONS_FILE_PATH, { header: true });
 
 languages.forEach((language) => {
   const { filePath, getLabels, createLabel, getXmlObject, keyProperty } =
@@ -94,9 +84,8 @@ function getConfig(language) {
 }
 
 function getExistingLabels(filePath, getLabels) {
-  return getLabels(xmlParser.parse(readFileSync(filePath))).map((label) => ({
-    ...label,
-  }));
+  const parsedXml = xmlParser.parse(readFileSync(filePath));
+  return getLabels(parsedXml);
 }
 
 function getMergedLabels(newLabels, keyProperty, existingLabels) {
